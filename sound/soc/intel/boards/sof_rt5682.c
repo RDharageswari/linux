@@ -328,6 +328,8 @@ static struct snd_soc_ops sof_rt1015_ops = {
 	.hw_params = sof_rt1015_hw_params,
 };
 
+SND_SOC_DAILINK_DEF(dummy, DAILINK_COMP_ARRAY(COMP_DUMMY()));
+
 static struct snd_soc_dai_link_component platform_component[] = {
 	{
 		/* name might be overridden during probe */
@@ -723,8 +725,24 @@ static struct snd_soc_dai_link *sof_card_dai_links_create(struct device *dev,
 			if (!links[id].cpus->dai_name)
 				goto devm_err;
 		}
+		id++;
 	}
 
+	links[id].name = "compress";
+	links[id].cpus = &cpus[id];
+	links[id].cpus->dai_name = "Probe Extraction CPU DAI";
+	links[id].init = NULL;
+	links[id].id = id;
+	links[id].num_cpus = 1;
+	links[id].codecs = dummy;
+	links[id].num_codecs = 1;
+	links[id].platforms = platform_component;
+	links[id].num_platforms = ARRAY_SIZE(platform_component);
+	links[id].ignore_suspend = 1;
+	links[id].dpcm_capture = 0;
+	links[id].dpcm_playback = 0;
+	links[id].no_pcm = 1;
+	links[id].ops = NULL;
 	return links;
 devm_err:
 	return NULL;
@@ -800,7 +818,7 @@ static int sof_audio_probe(struct platform_device *pdev)
 	ssp_codec = sof_rt5682_quirk & SOF_RT5682_SSP_CODEC_MASK;
 
 	/* compute number of dai links */
-	sof_audio_card_rt5682.num_links = 1 + dmic_be_num + hdmi_num;
+	sof_audio_card_rt5682.num_links = 2 + dmic_be_num + hdmi_num;
 
 	if (sof_rt5682_quirk & SOF_SPEAKER_AMP_PRESENT)
 		sof_audio_card_rt5682.num_links++;
